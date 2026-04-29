@@ -104,7 +104,6 @@ public class ShoeTest {
         for (int i = 0; i < 20; i++) shoe.draw();
         assertThat(shoe.remainingCards()).isEqualTo(32);
         shoe.shuffle();
-        // shuffle rebuilds — wait, should it? Let's verify current behaviour
         assertThat(shoe.remainingCards()).isEqualTo(32); // shuffle reorders, doesn't rebuild
     }
 }

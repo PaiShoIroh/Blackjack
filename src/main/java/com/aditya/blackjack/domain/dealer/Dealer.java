@@ -2,14 +2,30 @@ package com.aditya.blackjack.domain.dealer;
 
 import com.aditya.blackjack.domain.card.Card;
 import com.aditya.blackjack.domain.hand.Hand;
+import lombok.Getter;
 
+@Getter
 public class Dealer {
+
     private Hand hand;
+    private final boolean hitOnSoft17;
 
-    public Dealer() { }
+    public Dealer(boolean hitOnSoft17) {
+        this.hitOnSoft17 = hitOnSoft17;
+        this.hand = new Hand();
+    }
 
-    public void receiveCard(Card card) { }
-    public boolean shouldHit() { return false; } // hits on <17, configurable soft-17
-    public Hand getHand() { return hand; }
-    public void reset() { } // clear hand between rounds
+    public void receiveCard(Card card) {
+        hand.addCard(card);
+    }
+
+    public boolean shouldHit() {
+        int value = hand.getValue();
+        if (value < 17) return true;
+        return value == 17 && hand.isSoft() && hitOnSoft17;
+    }
+
+    public void reset() {
+        hand = new Hand();
+    }
 }

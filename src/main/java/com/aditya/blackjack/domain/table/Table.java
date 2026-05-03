@@ -5,7 +5,10 @@ import com.aditya.blackjack.domain.seat.Seat;
 import com.aditya.blackjack.domain.shoe.Shoe;
 import lombok.Getter;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Getter
 public class Table {
@@ -15,12 +18,40 @@ public class Table {
     private final Dealer dealer;
 
     public Table(TableConfig config) {
-        seats = List.of();
         this.config = config;
-        shoe = null;
-        dealer = null;
+        shoe = new Shoe(config.getNumberOfDecks());
+        dealer = new Dealer(config.isHitOnSoft17());
+        seats = initialiseSeats(config.getNumberOfSeats());
     }
 
-    public List<Seat> getOccupiedSeats() { return null; } // seats with players
-    public Seat getSeat(int id) { return null; }
+    private List<Seat> initialiseSeats(int numberOfSeats) {
+        List<Seat> seats = new ArrayList<>();
+        for (int i = 0; i < numberOfSeats; i++) {
+            seats.add(new Seat(i, config));
+        }
+        return Collections.unmodifiableList(seats);
+    }
+
+    public Optional<Seat> getSeat(int id) {
+        return seats.stream().filter(seat -> seat.getId() == id).findFirst();
+    }
+
+    public List<Seat> getOccupiedSeats() {
+        return seats.stream()
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
+
+    public List<Seat> getActiveSeats() {
+        return seats.stream()
+                .filter(Seat::isActive)
+                .toList();
+    }
+
+    public void resetForNewRound() {
+        if (shoe.needsShuffle())
+            shoe.reset();
+        dealer.reset();
+        seats.forEach(Seat::clearHand);
+    }
 }

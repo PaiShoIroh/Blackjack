@@ -15,17 +15,17 @@ public class Seat {
     private int bet;
     private SeatStatus status;
 
-    private Seat(int id, TableConfig config) {
+    public Seat(int id, TableConfig config) {
         this.id = id;
         this.config = config;
         this.status = SeatStatus.EMPTY;
     }
 
-    private void assignPlayer(Player player) {
+    public void assignPlayer(Player player) {
         if (player == null)
             throw new IllegalArgumentException("Player cannot be null");
         if (status != SeatStatus.EMPTY)
-            throw new IllegalArgumentException("Seat is already occupied");
+            throw new IllegalStateException("Seat is already occupied");
         this.player = player;
         this.status = SeatStatus.OCCUPIED;
     }
@@ -43,6 +43,7 @@ public class Seat {
         if (amount < config.getMinimumBet()) throw new IllegalArgumentException("Bet below table minimum");
         if (amount > config.getMaximumBet()) throw new IllegalArgumentException("Bet above table maximum");
         if (amount > player.getBalance()) throw new IllegalStateException("Insufficient player balance");
+        if (amount % 2 != 0) throw new IllegalArgumentException("Bet must be even");
         this.bet = amount;
         this.status = SeatStatus.ACTIVE;
         player.debit(amount);
@@ -66,6 +67,10 @@ public class Seat {
 
     public boolean isActive() {
         return status == SeatStatus.ACTIVE;
+    }
+
+    public void doubleBet() {
+        this.bet *= 2;
     }
 
 }

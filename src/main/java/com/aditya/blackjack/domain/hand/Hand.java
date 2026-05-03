@@ -75,4 +75,13 @@ public class Hand {
     public boolean canDoubleDown() {
         return cards.size() == 2;
     }
+
+    public Card split() {
+        if (!canSplit()) throw new IllegalStateException("Hand cannot be split");
+        return cards.removeLast();
+    }
+
+    public boolean canSurrender() {
+        return cards.size() == 2;
+    }
 }

@@ -76,7 +76,7 @@ public class ShoeTest {
         int total = shoe.totalCards();          // 312
         int cut = shoe.getCutCardPosition();
         // should be at ~75% — allow small rounding margin
-        assertThat(cut).isBetween((int)(total * 0.74), (int)(total * 0.76));
+        assertThat(cut).isBetween((int) (total * 0.74), (int) (total * 0.76));
     }
 
     @Test

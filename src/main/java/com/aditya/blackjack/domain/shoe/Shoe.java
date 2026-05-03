@@ -64,4 +64,14 @@ public class Shoe {
     public int totalCards() {
         return numberOfDecks * 52;
     }
+
+    public void reset() {
+        build();
+        shuffle();
+    }
+
+    // test hook — loads a fixed sequence of cards to the front of the shoe
+    public void loadCards(List<Card> fixedCards) {
+        this.cards = new ArrayList<>(fixedCards);
+    }
 }

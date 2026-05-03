@@ -1,5 +1,6 @@
 package com.aditya.blackjack.domain.table;
 
+import com.aditya.blackjack.domain.card.Card;
 import com.aditya.blackjack.domain.dealer.Dealer;
 import com.aditya.blackjack.domain.seat.Seat;
 import com.aditya.blackjack.domain.shoe.Shoe;
@@ -53,5 +54,11 @@ public class Table {
             shoe.reset();
         dealer.reset();
         seats.forEach(Seat::clearHand);
+    }
+
+    public Card getDealerUpCard() {
+        List<Card> cards = dealer.getHand().getCards();
+        if (cards.isEmpty()) throw new IllegalStateException("Dealer has no cards yet");
+        return cards.getFirst();
     }
 }

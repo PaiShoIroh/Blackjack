@@ -4,6 +4,8 @@ import com.aditya.blackjack.domain.card.Card;
 import com.aditya.blackjack.domain.hand.Hand;
 import com.aditya.blackjack.domain.player.Player;
 import com.aditya.blackjack.domain.table.TableConfig;
+import com.aditya.blackjack.exception.InsufficientBalanceException;
+import com.aditya.blackjack.exception.InvalidBetException;
 import lombok.Getter;
 
 @Getter
@@ -39,11 +41,11 @@ public class Seat {
     }
 
     public void placeBet(int amount) {
-        if (status != SeatStatus.OCCUPIED) throw new IllegalStateException("Seat must be occupied to place a bet");
-        if (amount < config.getMinimumBet()) throw new IllegalArgumentException("Bet below table minimum");
-        if (amount > config.getMaximumBet()) throw new IllegalArgumentException("Bet above table maximum");
-        if (amount > player.getBalance()) throw new IllegalStateException("Insufficient player balance");
-        if (amount % 2 != 0) throw new IllegalArgumentException("Bet must be even");
+        if (status != SeatStatus.OCCUPIED) throw new InvalidBetException("Seat must be occupied to place a bet");
+        if (amount < config.getMinimumBet()) throw new InvalidBetException("Bet below table minimum ($" + config.getMinimumBet() + ")");
+        if (amount > config.getMaximumBet()) throw new InvalidBetException("Bet above table maximum ($" + config.getMaximumBet() + ")");
+        if (amount > player.getBalance()) throw new InsufficientBalanceException("Insufficient balance ($" + player.getBalance() + ") for bet of $" + amount);
+        if (amount % 2 != 0) throw new InvalidBetException("Bet must be even (for split payouts)");
         this.bet = amount;
         this.status = SeatStatus.ACTIVE;
         player.debit(amount);

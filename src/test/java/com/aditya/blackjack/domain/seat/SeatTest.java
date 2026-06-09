@@ -5,6 +5,8 @@ import com.aditya.blackjack.domain.card.Rank;
 import com.aditya.blackjack.domain.card.Suit;
 import com.aditya.blackjack.domain.player.Player;
 import com.aditya.blackjack.domain.table.TableConfig;
+import com.aditya.blackjack.exception.InsufficientBalanceException;
+import com.aditya.blackjack.exception.InvalidBetException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -81,7 +83,7 @@ public class SeatTest {
     void betBelowMinimumThrows() {
         seat.assignPlayer(player);
         assertThatThrownBy(() -> seat.placeBet(5))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(InvalidBetException.class)
                 .hasMessageContaining("minimum");
     }
 
@@ -89,22 +91,41 @@ public class SeatTest {
     void betAboveMaximumThrows() {
         seat.assignPlayer(player);
         assertThatThrownBy(() -> seat.placeBet(1500))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(InvalidBetException.class)
                 .hasMessageContaining("maximum");
     }
 
     @Test
     void betAboveBalanceThrows() {
         seat.assignPlayer(player);
+        // max bet is 100, balance is 500 — bet of 600 hits max limit first
         assertThatThrownBy(() -> seat.placeBet(600))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Bet above table maximum");
+                .isInstanceOf(InvalidBetException.class)
+                .hasMessageContaining("maximum");
     }
 
     @Test
     void betOnEmptySeatThrows() {
         assertThatThrownBy(() -> seat.placeBet(100))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(InvalidBetException.class);
+    }
+
+    @Test
+    void betExceedingBalanceButWithinLimitsThrows() {
+        Player poorPlayer = new Player("poor", 20);
+        Seat poorSeat = new Seat(2, config);
+        poorSeat.assignPlayer(poorPlayer);
+        assertThatThrownBy(() -> poorSeat.placeBet(30))
+                .isInstanceOf(InsufficientBalanceException.class)
+                .hasMessageContaining("Insufficient balance");
+    }
+
+    @Test
+    void oddBetThrows() {
+        seat.assignPlayer(player);
+        assertThatThrownBy(() -> seat.placeBet(11))
+                .isInstanceOf(InvalidBetException.class)
+                .hasMessageContaining("even");
     }
 
     // --- dealing cards ---

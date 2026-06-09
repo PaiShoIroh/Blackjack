@@ -1,5 +1,7 @@
 package com.aditya.blackjack.domain.player;
 
+import com.aditya.blackjack.exception.GameException;
+import com.aditya.blackjack.exception.InsufficientBalanceException;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +41,7 @@ class PlayerTest {
     void debitMoreThanBalanceThrows() {
         Player player = new Player("aditya", 100);
         assertThatThrownBy(() -> player.debit(200))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(InsufficientBalanceException.class)
                 .hasMessageContaining("Insufficient");
     }
 
@@ -47,19 +49,19 @@ class PlayerTest {
     void negativeDebitThrows() {
         Player player = new Player("aditya", 1000);
         assertThatThrownBy(() -> player.debit(-50))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(GameException.class);
     }
 
     @Test
     void negativeCreditThrows() {
         Player player = new Player("aditya", 1000);
         assertThatThrownBy(() -> player.credit(-50))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(GameException.class);
     }
 
     @Test
     void negativeInitialBalanceThrows() {
         assertThatThrownBy(() -> new Player("aditya", -100))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(GameException.class);
     }
 }

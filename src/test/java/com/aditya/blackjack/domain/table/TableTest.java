@@ -1,5 +1,8 @@
 package com.aditya.blackjack.domain.table;
 
+import com.aditya.blackjack.domain.card.Card;
+import com.aditya.blackjack.domain.card.Rank;
+import com.aditya.blackjack.domain.card.Suit;
 import com.aditya.blackjack.domain.player.Player;
 import com.aditya.blackjack.domain.seat.Seat;
 import com.aditya.blackjack.domain.shoe.Shoe;
@@ -108,6 +111,22 @@ class TableTest {
         assertThat(table.getShoe().remainingCards()).isLessThan(fullSize);
         table.resetForNewRound();
         assertThat(table.getShoe().remainingCards()).isEqualTo(fullSize);
+    }
+
+    // --- getDealerUpCard ---
+
+    @Test
+    void getDealerUpCardReturnsFirstCard() {
+        Card card = new Card(Rank.ACE, Suit.SPADES);
+        table.getDealer().receiveCard(card);
+        table.getDealer().receiveCard(new Card(Rank.TEN, Suit.HEARTS));
+        assertThat(table.getDealerUpCard()).isEqualTo(card);
+    }
+
+    @Test
+    void getDealerUpCardWithNoCardsThrows() {
+        assertThatThrownBy(() -> table.getDealerUpCard())
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

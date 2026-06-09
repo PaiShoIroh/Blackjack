@@ -7,6 +7,9 @@ import com.aditya.blackjack.domain.player.Player;
 import com.aditya.blackjack.domain.player.PlayerAction;
 import com.aditya.blackjack.domain.seat.Seat;
 import com.aditya.blackjack.domain.table.Table;
+import com.aditya.blackjack.exception.InsufficientBalanceException;
+import com.aditya.blackjack.exception.InvalidActionException;
+import com.aditya.blackjack.exception.InvalidPhaseException;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -109,10 +112,10 @@ public class Round {
                 }
                 case STAND -> hand.setStatus(HandStatus.STOOD);
                 case DOUBLE_DOWN -> {
-                    if (!hand.canDoubleDown()) throw new IllegalStateException("Cannot double down on this hand");
+                    if (!hand.canDoubleDown()) throw new InvalidActionException("Cannot double down — only allowed on first two cards");
                     int extraBet = seat.getBet();
                     if (seat.getPlayer().getBalance() < extraBet) {
-                        throw new IllegalStateException("Insufficient balance to double down");
+                        throw new InsufficientBalanceException("Insufficient balance to double down (need $" + extraBet + ")");
                     }
                     seat.getPlayer().debit(extraBet);
                     seat.doubleBet();
@@ -120,13 +123,13 @@ public class Round {
                     hand.setStatus(hand.isBust() ? HandStatus.BUST : HandStatus.STOOD);
                 }
                 case SPLIT -> {
-                    if (!hand.canSplit()) throw new IllegalStateException("Cannot split on this hand");
+                    if (!hand.canSplit()) throw new InvalidActionException("Cannot split — cards must be a pair");
                     if (seat.getPlayer().getBalance() < seat.getBet())
-                        throw new IllegalStateException("Insufficient balance to split on this hand");
+                        throw new InsufficientBalanceException("Insufficient balance to split (need $" + seat.getBet() + ")");
                     performSplit(seat, hand);
                 }
                 case SURRENDER -> {
-                    if (!hand.canSurrender()) throw new IllegalStateException("Cannot surrender on this hand");
+                    if (!hand.canSurrender()) throw new InvalidActionException("Cannot surrender — only allowed on first two cards");
                     hand.setStatus(HandStatus.SURRENDERED);
                 }
             }
@@ -250,13 +253,9 @@ public class Round {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private Card draw() {
-        return table.getShoe().draw();
-    }
-
     private void assertPhase(RoundPhase expected) {
         if (phase != expected) {
-            throw new IllegalStateException("Expected phase " + expected + " but was " + phase);
+            throw new InvalidPhaseException(expected, phase);
         }
     }
 

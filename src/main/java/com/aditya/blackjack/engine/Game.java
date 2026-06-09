@@ -4,6 +4,7 @@ import com.aditya.blackjack.domain.player.Player;
 import com.aditya.blackjack.domain.seat.Seat;
 import com.aditya.blackjack.domain.table.Table;
 import com.aditya.blackjack.domain.table.TableConfig;
+import com.aditya.blackjack.exception.GameException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,7 +32,7 @@ public class Game {
 
     public void addPlayer(Player player, int seatId) {
         table.getSeat(seatId)
-                .orElseThrow(() -> new IllegalArgumentException("Seat" + seatId + "does not exist"))
+                .orElseThrow(() -> new GameException("Seat " + seatId + " does not exist"))
                 .assignPlayer(player);
     }
 
@@ -54,7 +55,13 @@ public class Game {
                 break;
             }
 
-            playRound();
+            try {
+                playRound();
+            } catch (GameException e) {
+                log.warn("Round error: {}", e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error during round", e);
+            }
             table.resetForNewRound();
         }
     }

@@ -7,6 +7,7 @@ import com.aditya.blackjack.domain.seat.Seat;
 import com.aditya.blackjack.domain.table.Table;
 import com.aditya.blackjack.domain.table.TableConfig;
 import com.aditya.blackjack.engine.*;
+import com.aditya.blackjack.exception.GameException;
 
 import java.util.*;
 
@@ -39,8 +40,12 @@ public class CLI {
         );
         this.table = game.getTable();
 
-
-        game.addPlayer(player, seatId);
+        try {
+            game.addPlayer(player, seatId);
+        } catch (GameException e) {
+            print("Error: " + e.getMessage());
+            return;
+        }
 
         print("\nWelcome to the table, " + username + "! Minimum bet: $" + config.getMinimumBet()
                 + ", Maximum bet: $" + config.getMaximumBet());
@@ -64,29 +69,54 @@ public class CLI {
         print("\n============================================================");
         for (Seat seat : occupiedSeats) {
             Player player = seat.getPlayer();
-            print("Balance: $" + player.getBalance());
-
-            String input = prompt("Seat " + seat.getId() + " — Place your bet (or 'skip' / 'quit'): ");
-
-            if (input.equalsIgnoreCase("quit")) {
+            int bet = promptBet(seat, player);
+            if (bet == -1) {
                 print("Leaving the table...");
-                return Map.of(); // empty map signals Game to stop
+                return Map.of();
             }
-
-            if (input.equalsIgnoreCase("skip")) {
-                print("Sitting out this round.");
-                continue;
-            }
-
-            try {
-                int amount = Integer.parseInt(input.trim());
-                bets.put(seat, amount);
-            } catch (NumberFormatException e) {
-                print("Invalid bet — sitting out this round.");
+            if (bet > 0) {
+                bets.put(seat, bet);
             }
         }
 
         return bets;
+    }
+
+    private int promptBet(Seat seat, Player player) {
+        while (true) {
+            print("Balance: $" + player.getBalance());
+            String input = prompt("Seat " + seat.getId() + " — Place your bet (or 'skip' / 'quit'): ");
+
+            if (input.equalsIgnoreCase("quit")) return -1;
+            if (input.equalsIgnoreCase("skip")) {
+                print("Sitting out this round.");
+                return 0;
+            }
+
+            try {
+                int amount = Integer.parseInt(input.trim());
+                // validate early so we can re-prompt on bad bets
+                if (amount < seat.getConfig().getMinimumBet()) {
+                    print("Bet below table minimum ($" + seat.getConfig().getMinimumBet() + "). Try again.");
+                    continue;
+                }
+                if (amount > seat.getConfig().getMaximumBet()) {
+                    print("Bet above table maximum ($" + seat.getConfig().getMaximumBet() + "). Try again.");
+                    continue;
+                }
+                if (amount > player.getBalance()) {
+                    print("Insufficient balance ($" + player.getBalance() + "). Try again.");
+                    continue;
+                }
+                if (amount % 2 != 0) {
+                    print("Bet must be even (for split payouts). Try again.");
+                    continue;
+                }
+                return amount;
+            } catch (NumberFormatException e) {
+                print("Invalid input — enter a number, 'skip', or 'quit'.");
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -94,11 +124,10 @@ public class CLI {
     // -------------------------------------------------------------------------
 
     private PlayerAction getAction(Seat seat, Hand hand) {
-        Hand dealerHand = table.getDealer().getHand();
         print("\nDealer shows: " + table.getDealerUpCard());
         printHand("Your hand", hand);
 
-        List<String> available = buildAvailableActions(hand);
+        List<String> available = buildAvailableActions(hand, seat);
         print("Available actions: " + String.join(", ", available));
 
         while (true) {
@@ -107,27 +136,43 @@ public class CLI {
                 case "hit", "h"         -> { return PlayerAction.HIT; }
                 case "stand", "s"       -> { return PlayerAction.STAND; }
                 case "double", "d"      -> {
-                    if (hand.canDoubleDown()) return PlayerAction.DOUBLE_DOWN;
-                    print("Cannot double down — choose another action.");
+                    if (!hand.canDoubleDown()) {
+                        print("Cannot double down — only allowed on first two cards.");
+                    } else if (seat.getPlayer().getBalance() < seat.getBet()) {
+                        print("Insufficient balance to double down (need $" + seat.getBet() + ").");
+                    } else {
+                        return PlayerAction.DOUBLE_DOWN;
+                    }
                 }
                 case "split", "sp"      -> {
-                    if (hand.canSplit()) return PlayerAction.SPLIT;
-                    print("Cannot split — choose another action.");
+                    if (!hand.canSplit()) {
+                        print("Cannot split — cards must be a pair.");
+                    } else if (seat.getPlayer().getBalance() < seat.getBet()) {
+                        print("Insufficient balance to split (need $" + seat.getBet() + ").");
+                    } else {
+                        return PlayerAction.SPLIT;
+                    }
                 }
                 case "surrender", "sur" -> {
-                    if (hand.canSurrender()) return PlayerAction.SURRENDER;
-                    print("Cannot surrender — choose another action.");
+                    if (!hand.canSurrender()) {
+                        print("Cannot surrender — only allowed on first two cards.");
+                    } else {
+                        return PlayerAction.SURRENDER;
+                    }
                 }
                 default -> print("Unknown action. Try: " + String.join(", ", available));
             }
         }
     }
 
-    private List<String> buildAvailableActions(Hand hand) {
+    private List<String> buildAvailableActions(Hand hand, Seat seat) {
         List<String> actions = new ArrayList<>(List.of("hit (h)", "stand (s)"));
-        if (hand.canDoubleDown()) actions.add("double (d)");
-        if (hand.canSplit())      actions.add("split (sp)");
-        if (hand.canSurrender())  actions.add("surrender (sur)");
+        if (hand.canDoubleDown() && seat.getPlayer().getBalance() >= seat.getBet())
+            actions.add("double (d)");
+        if (hand.canSplit() && seat.getPlayer().getBalance() >= seat.getBet())
+            actions.add("split (sp)");
+        if (hand.canSurrender())
+            actions.add("surrender (sur)");
         return actions;
     }
 

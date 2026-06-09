@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.aditya.blackjack.exception.GameException;
+import com.aditya.blackjack.exception.InvalidBetException;
+
 import static org.assertj.core.api.Assertions.*;
 
 class GameTest {
@@ -56,7 +59,7 @@ class GameTest {
     void addPlayerToInvalidSeatThrows() {
         Game game = buildGame(PlayerAction.STAND);
         assertThatThrownBy(() -> game.addPlayer(player, 99))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(GameException.class);
     }
 
     @Test
@@ -123,6 +126,59 @@ class GameTest {
 
         // player had 19 vs dealer 18 — should win
         assertThat(player.getBalance()).isGreaterThan(490); // at least got something back
+    }
+
+    @Test
+    void gameRecoversFromUnexpectedExceptionAndContinues() {
+        int[] callCount = {0};
+        Game game = new Game(config,
+                (seat, hand) -> { throw new RuntimeException("unexpected boom"); },
+                seats -> {
+                    callCount[0]++;
+                    if (callCount[0] <= 2) {
+                        return seats.stream()
+                                .collect(java.util.stream.Collectors.toMap(s -> s, s -> 10));
+                    }
+                    return Map.of();
+                }, NO_OP_LISTENER);
+        game.addPlayer(player, 1);
+        loadShoe(game,
+                new Card(Rank.TEN, Suit.HEARTS),
+                new Card(Rank.TEN, Suit.CLUBS),
+                new Card(Rank.FIVE, Suit.DIAMONDS),
+                new Card(Rank.NINE, Suit.SPADES)
+        );
+        game.start();
+        assertThat(game.isRunning()).isFalse();
+        assertThat(callCount[0]).isEqualTo(3);
+    }
+
+    @Test
+    void gameRecoversFromBadRoundAndContinues() {
+        // BetProvider returns an odd bet (invalid) on first call, then empty to stop
+        int[] callCount = {0};
+        Game game = new Game(config,
+                (seat, hand) -> PlayerAction.STAND,
+                seats -> {
+                    callCount[0]++;
+                    if (callCount[0] == 1) {
+                        // return an odd bet that will fail validation in Seat.placeBet
+                        return seats.stream()
+                                .collect(java.util.stream.Collectors.toMap(s -> s, s -> 11));
+                    }
+                    return Map.of(); // stop
+                }, NO_OP_LISTENER);
+        game.addPlayer(player, 1);
+        loadShoe(game,
+                new Card(Rank.TEN, Suit.HEARTS),
+                new Card(Rank.TEN, Suit.CLUBS),
+                new Card(Rank.EIGHT, Suit.DIAMONDS),
+                new Card(Rank.NINE, Suit.SPADES)
+        );
+        // should not throw — Game.start() catches the InvalidBetException and continues
+        game.start();
+        assertThat(game.isRunning()).isFalse();
+        assertThat(callCount[0]).isEqualTo(2); // proves it went back for a second round
     }
 
     @Test
